@@ -19,7 +19,8 @@ def utmb_extract_page(url):
     print("Extracting data from...",url)
     options = webdriver.ChromeOptions()
     remote_webdriver = 'remote_chromedriver'
-    options.headless = True
+    #options.add_argument('--no-sandbox')
+    #options.add_argument('-headless')
     options.page_load_strategy = 'normal'
     #driver = webdriver.Chrome(options=options)
     driver = webdriver.Remote(f'{remote_webdriver}:4444/wd/hub', options=options) 
@@ -35,7 +36,7 @@ def utmb_extract_page(url):
     return page_source
     
 def utmb_extract_data(html):
-    soup = BeautifulSoup(html,'html5lib')
+    soup = BeautifulSoup(html,'html.parser')
     events = soup.find_all("a",{'class':"style_EventPreview__kWm7L group no-link-underline"})
     
     return events
@@ -115,12 +116,14 @@ if __name__ == "__main__":
         data = utmb_extract_data(page)
         data_complete.extend(data)
     print(len(data_complete))
+    #print(data_complete)
+    print(type(data_complete))
     data_cleaned = utmb_transform_data(data_complete)
     print(data_cleaned)
-    #df.to_csv("data/utmb_data.csv",index=False)'''
+    '''#df.to_csv("data/utmb_data.csv",index=False)
     #df = pd.read_csv("data/utmb_data.csv",)
     data = utmb_clean_data(data_cleaned)
-    data.to_csv("data/utmb_data_clean.csv",index=False)
+    data.to_csv("data/utmb_data_clean.csv",index=False)'''
 
 
     
