@@ -18,8 +18,11 @@ sys.path.insert (0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def utmb_extract_page(url):
     print("Extracting data from...",url)
     options = webdriver.ChromeOptions()
+    remote_webdriver = 'remote_chromedriver'
+    options.headless = True
     options.page_load_strategy = 'normal'
-    driver = webdriver.Chrome(options=options)  # or Firefox()
+    #driver = webdriver.Chrome(options=options)
+    driver = webdriver.Remote(f'{remote_webdriver}:4444/wd/hub', options=options) 
     driver.get(url)
     
     # Wait for dynamic content to load
@@ -59,7 +62,7 @@ def utmb_transform_data(data):
     return data_cleaned
 
 def utmb_clean_data(data):
-
+    data = pd.DataFrame(data)
     #remove  "by UTMB®" in name 
     data.loc[:,"name"] = data["name"].str.replace("by UTMB®","")
     
@@ -110,12 +113,13 @@ if __name__ == "__main__":
     for p in range(1,4): #there are 3 pages with races
         page = utmb_extract_page(f"https://www.finishers.com/en/events?page={p}&tags=utmbevent")
         data = utmb_extract_data(page)
-        data_cleaned = utmb_transform_data(data)
-        data_complete.extend(utmb_transform_data(data))
-    df = pd.DataFrame(data_complete)
+        data_complete.extend(data)
+    print(len(data_complete))
+    data_cleaned = utmb_transform_data(data_complete)
+    print(data_cleaned)
     #df.to_csv("data/utmb_data.csv",index=False)'''
     #df = pd.read_csv("data/utmb_data.csv",)
-    data = utmb_clean_data(df)
+    data = utmb_clean_data(data_cleaned)
     data.to_csv("data/utmb_data_clean.csv",index=False)
 
 

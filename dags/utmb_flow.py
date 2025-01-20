@@ -12,17 +12,26 @@ from plugins.utmb_pipeline import utmb_extract_page, utmb_extract_data,utmb_tran
 def utmb_flow():
     @task #extract from utmb using request
     def utmb_extract():
-        url = "https://utmb.world/utmb-world-series-events"
-        page = utmb_extract_page(url)
-        data = utmb_extract_data(page)
+        data_complete = []
+        for p in range(1,4): #there are 3 pages with races
+            page = utmb_extract_page(f"https://www.finishers.com/en/events?page={p}&tags=utmbevent")
+            data = utmb_extract_data(page)
+            print(data)
+            print(len(data))
+            data_complete.extend(data)
+        return data_complete
 
     @task()#transform data 
     def utmb_transform(data):
         data_transformed = utmb_transform_data(data)
         data_cleaned = utmb_clean_data(data_transformed)
+        return data_cleaned
 
     @task() #load data to csv
     def utmb_load(data):
-        data_cleaned.to_csv("data/utmb_data_clean.csv",index=False)
-    raw_data = utmb_extract()
+        data.to_csv("data/utmb_data_clean.csv",index=False)
+
+    raw_data = utmb_extract()  
+    transformed_data = utmb_transform(raw_data)
+    utmb_load(transformed_data)
 utmb_flow()
