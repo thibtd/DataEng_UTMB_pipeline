@@ -62,8 +62,6 @@ bash bash_files/start.sh
 4. Run the pipeline:
 ```bash
 make run_dag
-# or
-airflow dags trigger utmb_flow
 ```
 
 ## Pipeline Components

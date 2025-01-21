@@ -113,6 +113,43 @@ def utmb_transform_data(data:list)->pd.DataFrame:
     return data 
 
 
+def clean_dates(row):
+    print(row)
+    print('end of row')
+    if row['date_confirmed']:
+        print("confirmed")
+        if '➜' in row['date']:
+            print("multiple dates")
+            splits = row['date'].split("➜")
+            start_split = splits[0].strip()
+            end_split = splits[1].strip().replace(",","")
+            row['mutlidays'] = True
+            row['start_day'] = int(start_split.split(" ")[0])
+            row['month'] = end_split.split(" ")[0]
+            row['end_day'] = int(end_split.split(" ")[1])
+            row['year'] = int(end_split.split(" ")[2])
+            print(f"from {row['start_day']} to {row['end_day']} {row['month']} {row['year']}")
+        else:
+            print("single date")
+            row['mutlidays'] = False
+            splits = row['date'].replace(",","").split(" ")
+            row['start_day'] = int(splits[2])
+            row['end_day'] = int(splits[2])
+            row['month'] = splits[1]
+            row['year'] = int(splits[3])
+            print(f"{row['start_day']} {row['month']} {row['year']}")
+    else:
+        month_reg = r'\b(January|February|March|April|May|June|July|August|September|October|November|December)\s\d{4}\b'
+        row['mutlidays'] = None
+        row['start_day'] = None
+        row['end_day'] = None
+        dates =  re.search(month_reg, row['date']).group(0).split(" ")
+        row['month'] = dates[0]
+        row['year'] = int(dates[1])
+        print(f"{row['month']} {row['year']}")
+        
+
+
 
     
 
@@ -120,16 +157,21 @@ def utmb_transform_data(data:list)->pd.DataFrame:
 
 if __name__ == "__main__":
     data_complete = []
-    for p in range(1,4): #there are 3 pages with races
+    '''for p in range(1,4): #there are 3 pages with races
         url = f"https://www.finishers.com/en/events?page={p}&tags=utmbevent"
         page = utmb_extract_page(url, local=True)
         data = utmb_extract_data(page)
         data = utmb_extract_clean_data(data)
         data_complete.extend(data)
         print(len(data_complete))
-        #print(data_complete)
-    data_cleaned = utmb_transform_data(data_complete)
-    print(data_cleaned)
+        #print(data_complete)'''
+    data = pd.read_csv('data/utmb_data_clean.csv')
+    print(data.iloc[0])
+    test = data.apply(clean_dates, axis=1)
+    print(test.columns)
+    print(test.head())
+    #data_cleaned = utmb_transform_data(data_complete)
+    #print(data_cleaned)
 
 
     
