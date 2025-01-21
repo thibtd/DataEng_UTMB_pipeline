@@ -3,44 +3,38 @@ from datetime import datetime
 import os 
 import sys 
 import json 
+import pandas as pd
 
 sys.path.insert (0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from plugins.utmb_pipeline import utmb_extract_page, utmb_extract_data,utmb_transform_data, utmb_clean_data
+from plugins.utmb_pipeline import utmb_extract_page, utmb_extract_data, utmb_extract_clean_data, utmb_transform_data
 
 
-@dag(start_date= datetime(2025,1,15),schedule=None, catchup=False,
+@dag( start_date= datetime(2025,1,15),schedule=None, catchup=False,
     default_args={"owner": "Thibaut Donis"})
 def utmb_flow():
-    @task #extract from utmb using request
-    def utmb_extract():
+    @task #extract from utmb using selenium and beautifulsoup
+    def utmb_extract()->list:
         data_complete = []
         for p in range(1,4): #there are 3 pages with races
             page = utmb_extract_page(f"https://www.finishers.com/en/events?page={p}&tags=utmbevent")
-            print(page)
             data = utmb_extract_data(page)
-            print(data)
-            print(len(data))
+            data = utmb_extract_clean_data(data)
             data_complete.extend(data)
-        print(len(data_complete))
-        print(type(data_complete))
-        utmb_extract.xcom_push(key="utmb_data", value=data_complete)
-        return f"ok {len(data_complete)} events retrieved"
+        return data_complete
 
     @task()#transform data 
-    def utmb_transform():
-        
-        data = utmb_transform.xcom_pull(key="utmb_data", task_ids="utmb_extract")
+    def utmb_transform(data:dict)->pd.DataFrame:
         print(data)
         print(type(data))
         data_transformed = utmb_transform_data(data)
-        data_cleaned = utmb_clean_data(data_transformed)
-        utmb_transform.xcom_push(key="utmb_data_cleaned", value=data_cleaned)
-        return "OK"
+        df = pd.DataFrame(data_transformed)
+        return df
 
     @task() #load data to csv
-    def utmb_load():
-        data_cleaned = utmb.load.xcom_pull(key="utmb_data_cleaned", task_ids="utmb_transform")
+    def utmb_load(data_cleaned:pd.DataFrame):
         data_cleaned.to_csv("data/utmb_data_clean.csv",index=False)
 
-    utmb_extract() >> utmb_transform() >> utmb_load()
+    raw_data:dict= utmb_extract()
+    transformed_data:list = utmb_transform(raw_data)
+    utmb_load(transformed_data)
 utmb_flow()

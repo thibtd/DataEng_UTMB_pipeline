@@ -2,52 +2,62 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 import pandas as pd
 import numpy as np
+import bs4
 from bs4 import BeautifulSoup
 from emoji import replace_emoji
 from utils import round_to_nearest_5,get_lat_long
-import re
-import os 
-import sys 
+import re, os ,sys ,time ,json
 
 sys.path.insert (0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 
-def utmb_extract_page(url):
+def utmb_extract_page(url:str, local: bool=False)->str:
     print("Extracting data from...",url)
     options = webdriver.ChromeOptions()
     remote_webdriver = 'remote_chromedriver'
-    #options.add_argument('--no-sandbox')
-    #options.add_argument('-headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('-headless')
     options.page_load_strategy = 'normal'
-    #driver = webdriver.Chrome(options=options)
-    driver = webdriver.Remote(f'{remote_webdriver}:4444/wd/hub', options=options) 
+    if local:
+        driver = webdriver.Chrome(options=options)
+    else:
+        driver = webdriver.Remote(f'{remote_webdriver}:4444/wd/hub', options=options) 
     driver.get(url)
     
     # Wait for dynamic content to load
-    wait = WebDriverWait(driver, timeout=2000)
-    wait2 = WebDriverWait(driver, timeout=2000)
-    #wait.until(EC.presence_of_element_located((By.CLASS_NAME,"grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")))
+    print("Waiting for page to load...")
+    start_time = time.time()
+    #this will trigger the error everytime but the page will load correctly and the correct data will be extracted (yey)
+    try:
+        element = WebDriverWait(driver, 2).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "style_EventPreview__kWm7L group no-link-underline")))
+    except TimeoutException as e:
+        print("the page took too long to load")
     
+    # Wait for dynamic content to load
     page_source = driver.page_source
     driver.quit()
+    end_time = time.time()
+    print(f"Page loaded in {end_time-start_time} seconds")
     return page_source
     
-def utmb_extract_data(html):
+def utmb_extract_data(html:str)->bs4.element.ResultSet:
     soup = BeautifulSoup(html,'html.parser')
-    events = soup.find_all("a",{'class':"style_EventPreview__kWm7L group no-link-underline"})
-    
+    events :bs4.element.ResultSet = soup.find_all("a",{'class':"style_EventPreview__kWm7L group no-link-underline"})
+    print(f"Found {len(events)} events")
     return events
 
 
-def utmb_transform_data(data):
-    data_cleaned = []
+def utmb_extract_clean_data(data:bs4.element.ResultSet)->list:
+    data_cleaned:list = []
     for i in range(0,len(data)):
 
         row = data[i]
-        values= {
+        values:dict= {
             "name": row.find("div",{"class":"typo-h4 leading-tight mb-1"}).text,
             "distances":row.find('div',{'class':'styles_Distances__GLSe1'}).text,
             "date":row.find('div',{'class':'flex flex-row items-center style_Date__UbJPv py-1'}).text,
@@ -62,16 +72,15 @@ def utmb_transform_data(data):
         data_cleaned.append(values)
     return data_cleaned
 
-def utmb_clean_data(data):
-    data = pd.DataFrame(data)
+def utmb_transform_data(data:list)->pd.DataFrame:
+    data: pd.DataFrame = pd.DataFrame(data)
     #remove  "by UTMB®" in name 
     data.loc[:,"name"] = data["name"].str.replace("by UTMB®","")
     
     #in distances remove "km" and split by " " and make dummies
     data['distances']= data["distances"].str.replace("km","").str.strip().str.split("\xa0")
-    unique_distances =data['distances'].explode().astype(float).apply(round_to_nearest_5).unique()
+    unique_distances :np.array =data['distances'].explode().astype(float).apply(round_to_nearest_5).unique()
     data['distances'] = data['distances'].apply(lambda d: [round_to_nearest_5(x) for x in d])
-    #print(unique_distances)
     for dist in sorted(unique_distances):
         data['distance_'+ str(dist)] = data['distances'].apply(lambda x: float(dist) in x)
 
@@ -84,13 +93,13 @@ def utmb_clean_data(data):
     data['styles'] = data['styles'].apply(lambda d:re.sub(r"\+\d+",'',d)).str.strip()
     data['styles'] = data['styles'].str.replace("®","")
     data['styles'] = data['styles'].apply(lambda d: replace_emoji(d,replace='\xa0')).str.replace(" ",'').str.strip().str.split("\xa0")
-    styles_unique = data['styles'].explode().unique()
+    styles_unique: np.array = data['styles'].explode().unique()
     for style in sorted(styles_unique):
         data['style_'+str(style)] = data['styles'].apply(lambda x: style in x)
     
     # in disipline create dummies split on +X
     data['disipline'] = data['disipline'].apply(lambda d:re.sub(r"\+\d+",'\xa0',d)).str.strip().str.split("\xa0")
-    disipline_unique = data['disipline'].explode().unique()
+    disipline_unique:np.array = data['disipline'].explode().unique()
     for disip in sorted(disipline_unique):
         data['disipline_'+str(disip)] = data['disipline'].apply(lambda x: disip in x)
 
@@ -112,18 +121,15 @@ def utmb_clean_data(data):
 if __name__ == "__main__":
     data_complete = []
     for p in range(1,4): #there are 3 pages with races
-        page = utmb_extract_page(f"https://www.finishers.com/en/events?page={p}&tags=utmbevent")
+        url = f"https://www.finishers.com/en/events?page={p}&tags=utmbevent"
+        page = utmb_extract_page(url, local=True)
         data = utmb_extract_data(page)
+        data = utmb_extract_clean_data(data)
         data_complete.extend(data)
-    print(len(data_complete))
-    #print(data_complete)
-    print(type(data_complete))
+        print(len(data_complete))
+        #print(data_complete)
     data_cleaned = utmb_transform_data(data_complete)
     print(data_cleaned)
-    '''#df.to_csv("data/utmb_data.csv",index=False)
-    #df = pd.read_csv("data/utmb_data.csv",)
-    data = utmb_clean_data(data_cleaned)
-    data.to_csv("data/utmb_data_clean.csv",index=False)'''
 
 
     
