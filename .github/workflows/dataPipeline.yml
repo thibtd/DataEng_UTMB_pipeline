@@ -28,7 +28,7 @@ jobs:
       run: docker compose up -d
 
     - name: run DAG
-      run: make run_dag
+      run: make run_dag_GHActions
       
     - name: stop Docker containers
       run: make stop_docker
