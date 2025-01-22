@@ -1,1 +1,1 @@
-docker compose down --volumes all
+docker compose down 
