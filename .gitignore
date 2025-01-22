@@ -11,3 +11,5 @@ airflow.cfg
 airflow.db
 /logs
 /datarep
+data/utmb_data_clean.csv
+data/utmb_data_raw.csv

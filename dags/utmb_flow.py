@@ -6,7 +6,7 @@ import json
 import pandas as pd
 
 sys.path.insert (0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from plugins.utmb_pipeline import utmb_extract_page, utmb_extract_data, utmb_extract_clean_data, utmb_transform_data
+from plugins.utmb_pipeline import utmb_extract_page, utmb_extract_data, utmb_extract_clean_data, utmb_transform_data, load_data_to_db
 
 
 @dag( start_date= datetime(2025,1,15),schedule=None, catchup=False,
@@ -32,7 +32,7 @@ def utmb_flow():
 
     @task() #load data to csv
     def utmb_load(data_cleaned:pd.DataFrame):
-        data_cleaned.to_csv("data/utmb_data_clean.csv",index=False)
+        load_data_to_db(data_cleaned)
 
     raw_data:dict= utmb_extract()
     transformed_data:list = utmb_transform(raw_data)

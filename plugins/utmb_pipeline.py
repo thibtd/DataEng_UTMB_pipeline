@@ -5,11 +5,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import pandas as pd
 import numpy as np
-import bs4
 from bs4 import BeautifulSoup
 from emoji import replace_emoji
-from utils import round_to_nearest_5,get_lat_long
-import re, os ,sys ,time ,json
+from utils import round_to_nearest_5,get_lat_long, clean_dates
+import re, os ,sys ,time ,json, datetime, bs4
+import duckdb
 
 sys.path.insert (0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -103,75 +103,48 @@ def utmb_transform_data(data:list)->pd.DataFrame:
     for disip in sorted(disipline_unique):
         data['disipline_'+str(disip)] = data['disipline'].apply(lambda x: disip in x)
 
+    # clean the dates 
+    data[['multidays', 'start_day', 'end_day','month','year','duration']]= data.apply(clean_dates, axis=1,result_type='expand')
+
     #for each city find lat and long
     data[['latitude','longitude']] = data['city'].apply(lambda x: pd.Series(get_lat_long(x)))
-
-
+    
     # drop the columns 
-    data.drop(columns=['distances','styles','disipline'],axis=1,inplace=True)
+    data.drop(columns=['distances','styles','disipline', 'date'],axis=1,inplace=True)
 
     return data 
 
-
-def clean_dates(row):
-    print(row)
-    print('end of row')
-    if row['date_confirmed']:
-        print("confirmed")
-        if '➜' in row['date']:
-            print("multiple dates")
-            splits = row['date'].split("➜")
-            start_split = splits[0].strip()
-            end_split = splits[1].strip().replace(",","")
-            row['mutlidays'] = True
-            row['start_day'] = int(start_split.split(" ")[0])
-            row['month'] = end_split.split(" ")[0]
-            row['end_day'] = int(end_split.split(" ")[1])
-            row['year'] = int(end_split.split(" ")[2])
-            print(f"from {row['start_day']} to {row['end_day']} {row['month']} {row['year']}")
-        else:
-            print("single date")
-            row['mutlidays'] = False
-            splits = row['date'].replace(",","").split(" ")
-            row['start_day'] = int(splits[2])
-            row['end_day'] = int(splits[2])
-            row['month'] = splits[1]
-            row['year'] = int(splits[3])
-            print(f"{row['start_day']} {row['month']} {row['year']}")
-    else:
-        month_reg = r'\b(January|February|March|April|May|June|July|August|September|October|November|December)\s\d{4}\b'
-        row['mutlidays'] = None
-        row['start_day'] = None
-        row['end_day'] = None
-        dates =  re.search(month_reg, row['date']).group(0).split(" ")
-        row['month'] = dates[0]
-        row['year'] = int(dates[1])
-        print(f"{row['month']} {row['year']}")
-        
-
-
-
-    
-
+def load_data_to_db(data:pd.DataFrame)->str:
+    '''
+    load the dataFrame to a duckdb instance
+    '''
+    conn = duckdb.connect('data/utmb_db.duckdb')
+    duck_tables = conn.sql("show all tables").df()
+    if 'UTMB' in duck_tables['name'].values:
+        conn.sql("DROP TABLE UTMB")
+    conn.sql("CREATE TABLE UTMB AS \
+    SELECT * FROM data;")
+    return print('data successfully saved to duckDB')
 
 
 if __name__ == "__main__":
     data_complete = []
-    '''for p in range(1,4): #there are 3 pages with races
+    for p in range(1,4): #there are 3 pages with races
         url = f"https://www.finishers.com/en/events?page={p}&tags=utmbevent"
         page = utmb_extract_page(url, local=True)
         data = utmb_extract_data(page)
         data = utmb_extract_clean_data(data)
         data_complete.extend(data)
         print(len(data_complete))
-        #print(data_complete)'''
-    data = pd.read_csv('data/utmb_data_clean.csv')
-    print(data.iloc[0])
-    test = data.apply(clean_dates, axis=1)
-    print(test.columns)
-    print(test.head())
-    #data_cleaned = utmb_transform_data(data_complete)
-    #print(data_cleaned)
-
+    
+    pd.DataFrame(data_complete).to_csv('data/utmb_data_raw.csv',index=False)
+    data_cleaned = utmb_transform_data(data_complete)
+    data_cleaned.to_csv('data/utmb_data_clean.csv',index=False)
+    data_cleaned = pd.read_csv('data/utmb_data_clean.csv')
+    load_data_to_db(data_cleaned)
+    conn = duckdb.connect('data/utmb_db.duckdb')
+    data_cleaned = conn.sql("select * from UTMB")
+    print(data_cleaned)
+    tables = conn.sql("SHOW ALL TABLES")
 
     

@@ -18,6 +18,7 @@ Technologies used:
 - PostgreSQL for metadata storage
 - Redis for task queue management
 - Docker for containerization
+- DuckDB for data storage and querying
 
 ## Project Structure
 
@@ -71,15 +72,18 @@ make run_dag
    - Navigates through multiple pages of events
    - Handles dynamic content loading using Selenium
 
+
 2. **Transform**: 
    - Cleans and structures race information
-   - Processes distances, dates, and locations
-   - Extracts race styles and disciplines
+   - Processes distances and creates distance-specific flags
+   - Parses dates into start/end dates and duration
+   - Extracts race styles and disciplines into separate columns
    - Generates geographic coordinates for race locations
 
 3. **Load**: 
-   - Saves processed race data to CSV format
-   - Maintains historical race information
+   - Saves processed data to CSV format
+   - Stores data in DuckDB for efficient querying
+   - Maintains table 'UTMB' with latest race information
 
 ## Development
 
@@ -91,7 +95,7 @@ make run_dag
 ## Stopping the Services
 
 ```bash
-make end_docker
+make stop_docker
 # or
 bash bash_files/take_down.sh
 ```

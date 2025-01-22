@@ -15,7 +15,7 @@ lint:
 start_docker:
 	bash bash_files/start.sh
 
-end_docker:
+stop_docker:
 	bash bash_files/take_down.sh
 
 run_dag:
