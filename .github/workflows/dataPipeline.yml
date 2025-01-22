@@ -26,7 +26,8 @@ jobs:
   
     - name: start Docker containers
       run: docker compose up -d
-
+    - name: list DAGS
+      run: docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list
     - name: run DAG
       run: make run_dag_GHActions
       
