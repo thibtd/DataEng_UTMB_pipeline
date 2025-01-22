@@ -2,7 +2,11 @@ name: Makefile CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: 
+      - main
+    paths:
+      - 'dags/**'
+      - 'plugins/**'
     
 jobs:
   build:
@@ -30,6 +34,9 @@ jobs:
       run: docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list
     - name: run DAG
       run: make run_dag_GHActions
-      
+    - uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: ran the DAGs and updated the data
     - name: stop Docker containers
       run: make stop_docker
+    
