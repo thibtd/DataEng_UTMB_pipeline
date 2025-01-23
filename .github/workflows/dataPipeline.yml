@@ -29,11 +29,12 @@ jobs:
     - name: init Docker containers
       run: docker compose up  airflow-init
     
-    - name: wait for Airflow to start
-      run:  make wait_for_airflow
   
     - name: start Docker containers
       run: docker compose up -d
+
+    - name: wait for Airflow to start
+      run:  make wait_for_airflow
     
     - name: list DAGS
       run: docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list
