@@ -38,7 +38,8 @@ run_dag_GHActions:
 	# make sure the DAG is not pause 
 	docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags unpause utmb_flow 
 	# trigger and run the DAG
-	docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags trigger utmb_flow
+	#docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags trigger utmb_flow
+	docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags test utmb_flow –save-dagrun output.png
 	# verify that it is running
 	docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list-runs -d utmb_flow
 
