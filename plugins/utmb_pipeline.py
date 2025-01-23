@@ -8,7 +8,8 @@ import numpy as np
 from bs4 import BeautifulSoup
 from emoji import replace_emoji
 from utils import round_to_nearest_5,get_lat_long, clean_dates
-import re, os ,sys ,time ,json, datetime, bs4,duckdb
+import re, os ,sys ,time ,json, datetime, bs4
+import duckdb
 
 sys.path.insert (0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -113,12 +114,17 @@ def utmb_transform_data(data:list)->pd.DataFrame:
 
     return data 
 
-def load_data_to_db(data:pd.DataFrame)->str:
+def load_data_to_db(data:pd.DataFrame,conn)->str:
     '''
-    load the dataFrame to a a csv file
+    load the dataFrame to a duckdb instance
     '''
-    data.to_csv('data/utmb_data_clean.csv',index=False)
-    return print('data successfully saved to csv')
+    conn = duckdb.connect('data/utmb_db.duckdb')
+    duck_tables = conn.sql("show all tables").df()
+    if 'UTMB' in duck_tables['name'].values:
+        conn.sql("DROP TABLE UTMB")
+    conn.sql("CREATE TABLE UTMB AS \
+    SELECT * FROM data;")
+    return print('data successfully saved to duckDB')
 
 
 if __name__ == "__main__":
