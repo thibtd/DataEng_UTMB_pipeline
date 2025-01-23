@@ -12,7 +12,7 @@ echo "Running DAG..."
 make run_dag_local
 
 # give some time for the DAG to complete
-sleep 30
+#sleep 30
 
 # Monitor DAG completion
 MAX_WAIT=300  # 5 minutes timeout
