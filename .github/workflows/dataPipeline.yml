@@ -8,6 +8,7 @@ on:
       - 'dags/**'
       - 'plugins/**'
       - '.github/workflows/**'
+      - 'data/**'
     
 jobs:
   build:
