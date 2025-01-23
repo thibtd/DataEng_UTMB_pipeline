@@ -13,6 +13,10 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
 
     steps:
     - name: Checkout repository
@@ -44,10 +48,13 @@ jobs:
 
     - name: Wait for DAG completion
       run: sleep 120
+           docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list-runs -d utmb_flow
 
-    - uses: stefanzweifel/git-auto-commit-action@v4
+    - name: Git Auto Commit
+      uses: stefanzweifel/git-auto-commit-action@v4
       with:
         commit_message: ran the DAGs and updated the data
+        push_options: '--force'
     - name: stop Docker containers
       run: make stop_docker
 
