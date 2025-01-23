@@ -31,13 +31,53 @@ jobs:
   
     - name: start Docker containers
       run: docker compose up -d
+    
+    - name: wait for Airflow to start
+      run: while ! curl -s "http://localhost:8080/health" > /dev/null; do
+            sleep 5
+           done
+      
     - name: list DAGS
       run: docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list
+   
     - name: run DAG
       run: make run_dag_GHActions
+
+    - name: Wait for DAG completion
+      run: |
+        MAX_WAIT=300  # 5 minutes timeout
+        INTERVAL=10   # Check every 10 seconds
+        ELAPSED=0
+        
+        while [ $ELAPSED -lt $MAX_WAIT ]; do
+          # Check specifically the last run status
+          STATUS=$(docker exec utmb_data_eng-airflow-webserver-1 airflow dags list-runs -d utmb_flow --no-backfill | grep -E "success|failed|running" || echo "pending")
+    
+          if [[ $STATUS == *"success"* ]]; then
+            echo "Last DAG run completed successfully"
+            break
+          elif [[ $STATUS == *"failed"* ]]; then
+            echo "Last DAG run failed"
+            make stop_docker
+            exit 1
+          elif [[ $STATUS == *"running"* ]]; then
+            echo "DAG is still running... ($ELAPSED seconds elapsed)"
+          else
+            echo "Waiting for DAG to start... ($ELAPSED seconds elapsed)"
+          fi
+          sleep $INTERVAL
+          ELAPSED=$((ELAPSED + INTERVAL))
+        done
+        
+        if [ $ELAPSED -ge $MAX_WAIT ]; then
+          echo "Timeout waiting for DAG completion"
+          make stop_docker
+          exit 1
+        fi
+
     - uses: stefanzweifel/git-auto-commit-action@v4
       with:
         commit_message: ran the DAGs and updated the data
     - name: stop Docker containers
       run: make stop_docker
-    
+
