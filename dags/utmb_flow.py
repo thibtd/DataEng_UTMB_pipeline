@@ -30,7 +30,7 @@ def utmb_flow():
 
     @task() #load data to csv
     def utmb_load(data_cleaned:pd.DataFrame):
-        load_data_to_db(data_cleaned,conn)
+        load_data_to_db(data_cleaned)
 
     raw_data:dict= utmb_extract()
     transformed_data:list = utmb_transform(raw_data)
