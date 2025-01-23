@@ -40,14 +40,14 @@ jobs:
 
     - name: Wait for DAG completion
       run: |
-        MAX_WAIT=300  # 5 minutes timeout
+        MAX_WAIT=180  # 5 minutes timeout
         INTERVAL=10   # Check every 10 seconds
         ELAPSED=0
         
         while [ $ELAPSED -lt $MAX_WAIT ]; do
           # Check specifically the last run status
           STATUS=$(docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list-runs -d utmb_flow --no-backfill | grep -E "success|failed|running" || echo "pending")
-    
+          echo "{$STATUS}" 
           if [[ $STATUS == *"success"* ]]; then
             echo "Last DAG run completed successfully"
             break
