@@ -22,21 +22,34 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      
     - name: Set up Python
       # This is the version of the action for setting up Python, not the Python version.
       uses: actions/setup-python@v5
       with:
         # Semantic version range syntax or exact version of a Python version
         python-version: '3.12'
+
+    - name: Create and set permissions for data directory
+      run: |
+        mkdir -p data
+        chmod 777 data
+        
     - name: Set up Docker
       uses: docker/setup-buildx-action@v2
       
-    - name: init Docker containers
-      run: docker compose up  airflow-init
+    - name: Initialize Docker containers with proper permissions
+      run: |
+        AIRFLOW_UID=$(id -u)
+        AIRFLOW_GID=$(id -g)
+        echo "AIRFLOW_UID=${AIRFLOW_UID}" >> $GITHUB_ENV
+        echo "AIRFLOW_GID=${AIRFLOW_GID}" >> $GITHUB_ENV
+        docker compose up airflow-init
     
-  
-    - name: start Docker containers
-      run: docker compose up -d
+    - name: Start Docker containers
+      run: |
+        docker compose up -d
+        docker exec dataeng_utmb_pipeline-airflow-webserver-1 bash -c "mkdir -p /opt/airflow/data && chmod 777 /opt/airflow/data"
 
     - name: wait for Airflow to start
       run:  make wait_for_airflow
