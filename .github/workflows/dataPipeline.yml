@@ -30,11 +30,7 @@ jobs:
       run: docker compose up  airflow-init
     
     - name: wait for Airflow to start
-      run:  echo "Waiting for Airflow webserver..."
-            while ! curl -s "http://localhost:8080/health" > /dev/null; do
-              sleep 5
-            done
-            echo "Airflow webserver is ready!"
+      run:  make wait_for_airflow
   
     - name: start Docker containers
       run: docker compose up -d
