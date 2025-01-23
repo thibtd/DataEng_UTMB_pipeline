@@ -114,7 +114,7 @@ def utmb_transform_data(data:list)->pd.DataFrame:
 
     return data 
 
-def load_data_to_db(data:pd.DataFrame,conn)->str:
+def load_data_to_db(data:pd.DataFrame)->str:
     '''
     load the dataFrame to a duckdb instance
     '''
