@@ -5,7 +5,7 @@ echo "Starting local test run..."
 source .venv/bin/activate
 # Start Docker containers
 make start_docker
-
+make wait_for_airflow
 
 # Run the DAG
 echo "Running DAG..."
