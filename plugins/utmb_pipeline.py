@@ -113,16 +113,12 @@ def utmb_transform_data(data:list)->pd.DataFrame:
 
     return data 
 
-def load_data_to_db(data:pd.DataFrame,conn)->str:
+def load_data_to_db(data:pd.DataFrame)->str:
     '''
-    load the dataFrame to a duckdb instance
+    load the dataFrame to a a csv file
     '''
-    duck_tables = conn.sql("show all tables").df()
-    if 'UTMB' in duck_tables['name'].values:
-        conn.sql("DROP TABLE UTMB")
-    conn.sql("CREATE TABLE UTMB AS \
-    SELECT * FROM data;")
-    return print('data successfully saved to duckDB')
+    data.to_csv('data/utmb_data_clean.csv',index=False)
+    return print('data successfully saved to csv')
 
 
 if __name__ == "__main__":

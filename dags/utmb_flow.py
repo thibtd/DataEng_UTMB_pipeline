@@ -30,7 +30,6 @@ def utmb_flow():
 
     @task() #load data to csv
     def utmb_load(data_cleaned:pd.DataFrame):
-        conn = duckdb.connect('data/utmb_db.duckdb')
         load_data_to_db(data_cleaned,conn)
 
     raw_data:dict= utmb_extract()
