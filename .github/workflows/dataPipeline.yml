@@ -48,7 +48,8 @@ jobs:
 
     - name: Wait for DAG completion
       run: sleep 120
-           docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list-runs -d utmb_flow
+    - name: verify completion
+      run:  docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list-runs -d utmb_flow
 
     - name: Git Auto Commit
       uses: stefanzweifel/git-auto-commit-action@v4
