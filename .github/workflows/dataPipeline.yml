@@ -56,7 +56,15 @@ jobs:
             echo "Last DAG run completed successfully"
             break
           elif [[ $STATUS == *"failed"* ]]; then
-            echo "Last DAG run failed"
+            echo "Last DAG run failed. Printing logs..."
+            # Get the latest dag_id
+            DAG_RUN_ID=$(docker exec utmb_data_eng-airflow-webserver-1 airflow dags list-runs -d utmb_flow --no-backfill | grep -E "failed" | awk '{print $1}')
+            # Print logs for all tasks in the failed DAG run
+            docker exec utmb_data_eng-airflow-webserver-1 airflow dags show-dag utmb_flow --save logs.txt
+            docker exec utmb_data_eng-airflow-webserver-1 airflow tasks list utmb_flow | while read -r task; do
+                echo "=== Logs for task: $task ==="
+                docker exec utmb_data_eng-airflow-webserver-1 airflow tasks logs utmb_flow $task $DAG_RUN_ID
+            done
             exit 1
           elif [[ $STATUS == *"running"* ]]; then
             echo "DAG is still running... ($ELAPSED seconds elapsed)"
