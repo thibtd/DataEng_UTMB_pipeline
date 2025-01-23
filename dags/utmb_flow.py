@@ -1,8 +1,6 @@
 from airflow.decorators import dag, task
 from datetime import datetime
-import os 
-import sys 
-import json 
+import os,sys,json, duckdb
 import pandas as pd
 
 sys.path.insert (0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,7 +30,8 @@ def utmb_flow():
 
     @task() #load data to csv
     def utmb_load(data_cleaned:pd.DataFrame):
-        load_data_to_db(data_cleaned)
+        conn = duckdb.connect('data/utmb_db.duckdb')
+        load_data_to_db(data_cleaned,conn)
 
     raw_data:dict= utmb_extract()
     transformed_data:list = utmb_transform(raw_data)
