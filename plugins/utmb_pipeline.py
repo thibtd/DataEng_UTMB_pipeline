@@ -79,10 +79,9 @@ def utmb_transform_data(data:list)->pd.DataFrame:
     
     #in distances remove "km" and split by " " and make dummies
     data['distances']= data["distances"].str.replace("km","").str.strip().str.split("\xa0")
-    unique_distances :np.array =data['distances'].explode().astype(float).apply(round_to_nearest_5).unique()
-    data['distances'] = data['distances'].apply(lambda d: [round_to_nearest_5(x) for x in d])
-    for dist in sorted(unique_distances):
-        data['distance_'+ str(dist)] = data['distances'].apply(lambda x: float(dist) in x)
+    data = data.explode('distances')
+    data['name'] = data['name'] + '_' + data['distances'].astype(str)
+    data = data.reset_index(drop=True)
 
 
     #in date remove "Date confirmed" and split by into year, month, day and duration (days)
@@ -129,7 +128,7 @@ def load_data_to_db(data:pd.DataFrame)->str:
 
 if __name__ == "__main__":
     data_complete = []
-    for p in range(1,4): #there are 3 pages with races
+    ''' for p in range(1,4): #there are 3 pages with races
         url = f"https://www.finishers.com/en/events?page={p}&tags=utmbevent"
         page = utmb_extract_page(url, local=True)
         data = utmb_extract_data(page)
@@ -137,14 +136,16 @@ if __name__ == "__main__":
         data_complete.extend(data)
         print(len(data_complete))
     
-    pd.DataFrame(data_complete).to_csv('data/utmb_data_raw.csv',index=False)
+    pd.DataFrame(data_complete).to_csv('data/utmb_data_raw.csv',index=False) '''
+    data_complete = pd.read_csv('data/utmb_data_raw.csv')
     data_cleaned = utmb_transform_data(data_complete)
-    data_cleaned.to_csv('data/utmb_data_clean.csv',index=False)
+    print(data_cleaned)
+    '''data_cleaned.to_csv('data/utmb_data_clean.csv',index=False)
     data_cleaned = pd.read_csv('data/utmb_data_clean.csv')
     load_data_to_db(data_cleaned)
     conn = duckdb.connect('data/utmb_db.duckdb')
     data_cleaned = conn.sql("select * from UTMB")
     print(data_cleaned)
-    tables = conn.sql("SHOW ALL TABLES")
+    tables = conn.sql("SHOW ALL TABLES")'''
 
     

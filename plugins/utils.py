@@ -20,7 +20,7 @@ def clean_dates(row:pd.Series)->tuple:
     year:int = None
     duration:int = None 
     if 'Mozart' in row['name'] and '2025' in row['date']: 
-        mulitdays = False
+        multidays = False
         start_day = 7
         end_day = 7
         month = datetime.datetime.strptime('June', '%B').month
@@ -32,7 +32,7 @@ def clean_dates(row:pd.Series)->tuple:
             start_split:list = splits[0].strip()
             end_split:list = splits[1].strip().replace(",","")
 
-            mutlidays = True
+            multidays = True
             start_day = int(start_split.split(" ")[0])
             month_name = end_split.split(" ")[0]
             month = datetime.datetime.strptime(month_name, '%B').month 
@@ -42,7 +42,7 @@ def clean_dates(row:pd.Series)->tuple:
             end_date = datetime.datetime(year,month,end_day)
             duration = (end_date - start_date).days
         else:
-            mutlidays= False
+            multidays= False
             splits:list = row['date'].replace(",","").split(" ")
             start_day = int(splits[2])
             end_day = int(splits[2])
