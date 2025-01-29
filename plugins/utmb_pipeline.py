@@ -65,7 +65,7 @@ def utmb_extract_clean_data(data:bs4.element.ResultSet)->list:
             'country': row.find("div",{"class":"style_City__mrIOD"}).find("img").get("title"),
             'city': row.find('div',{'class':'style_City__mrIOD'}).text,
             "styles":row.find('div',{'class':'style_Tags__1wVj6 nice-scrollbar'}).text,
-            "disipline":row.find('div',{'class':'style_Disciplines__KoinH'}).text,
+            "discipline":row.find('div',{'class':'style_Disciplines__KoinH'}).text,
             "image":row.find("img").get("src") if row.find("img") else "NO IMAGE",
             "link":"https://www.finishers.com" + row.get("href")
         }
@@ -97,11 +97,11 @@ def utmb_transform_data(data:list)->pd.DataFrame:
     for style in sorted(styles_unique):
         data['style_'+str(style)] = data['styles'].apply(lambda x: style in x)
     
-    # in disipline create dummies split on +X
-    data['disipline'] = data['disipline'].apply(lambda d:re.sub(r"\+\d+",'\xa0',d)).str.strip().str.split("\xa0")
-    disipline_unique:np.array = data['disipline'].explode().unique()
-    for disip in sorted(disipline_unique):
-        data['disipline_'+str(disip)] = data['disipline'].apply(lambda x: disip in x)
+    # in discipline create dummies split on +X
+    data['discipline'] = data['discipline'].apply(lambda d:re.sub(r"\+\d+",'\xa0',d)).str.strip().str.split("\xa0")
+    discipline_unique:np.array = data['discipline'].explode().unique()
+    for disip in sorted(discipline_unique):
+        data['discipline_'+str(disip)] = data['discipline'].apply(lambda x: disip in x)
 
     # clean the dates 
     data[['multidays', 'start_day', 'end_day','month','year','duration']]= data.apply(clean_dates, axis=1,result_type='expand')
@@ -110,7 +110,7 @@ def utmb_transform_data(data:list)->pd.DataFrame:
     data[['latitude','longitude']] = data['city'].apply(lambda x: pd.Series(get_lat_long(x)))
     
     # drop the columns 
-    data.drop(columns=['distances','styles','disipline', 'date'],axis=1,inplace=True)
+    data.drop(columns=['distances','styles','discipline', 'date'],axis=1,inplace=True)
 
     return data 
 
