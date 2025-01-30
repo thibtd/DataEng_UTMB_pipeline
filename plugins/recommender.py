@@ -6,24 +6,37 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 from yellowbrick.cluster import KElbowVisualizer, SilhouetteVisualizer
-from utils import get_lat_long, round_to_nearest_5
+from plugins.utils import get_lat_long, round_to_nearest_5
+from sklearn.decomposition import PCA
+from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
+import plotly.express as px
 
 class Recommender():
     def __init__(self, data):
         self.scaler = StandardScaler()
         self.data = data
         self.cleaned_data = self.preprocess()
-        self.kmeans = self.build_kmeans()
         self.visualizer_elbow = None
         self.k = None
+        self.kmeans = self.build_kmeans()
         self.user_input = None
         self.recommended = None
+        self.explained_variance_ratio = None
+        self.cumulative_explained_variance = None
+        self.loadings = None
 
 
     def clean(self):
-        # month and year as int
+        # month, year as int
         self.data['month'] = self.data['month'].astype(int)
         self.data['year'] = self.data['year'].astype(int)
+        
+        # replace nan with 0 and convert to int 
+        self.data['start_day'] = self.data['start_day'].replace(np.nan, 0)
+        self.data['start_day'] = self.data['start_day'].astype(int)
+        self.data['end_day'] = self.data['end_day'].replace(np.nan, 0)
+        self.data['end_day'] = self.data['end_day'].astype(int)
 
         # replace nan with 0
         self.data['duration'] = self.data['duration'].fillna(0)
@@ -51,52 +64,81 @@ class Recommender():
         self.visualizer_elbow = KElbowVisualizer(model, k=(1,12))
         self.visualizer_elbow.fit(self.cleaned_data)   
         self.k = self.visualizer_elbow.elbow_value_
+        
         # run the model 
         kmeans = KMeans(n_clusters=self.k)
         kmeans = kmeans.fit(self.cleaned_data)
         kmeans.predict(self.cleaned_data)
         return kmeans
+    
     def inspect_kmeans(self):
         # elbow plot
-        self.visualizer_elbow.show()
+        fig, (ax1, ax2, ax3,ax4) = plt.subplots(1, 4, figsize=(20, 6))
+        self.visualizer_elbow.finalize()
+        self.visualizer_elbow.ax = ax1
+        ax1.set_title("Elbow Plot")
+       
+
         # silhouette plot
-        visualizer = SilhouetteVisualizer(self.kmeans, colors='yellowbrick')
-        visualizer.fit(self.cleaned_data)
-        visualizer.show()
-        # pca plot
+        silhouette_visualizer = SilhouetteVisualizer(self.kmeans, colors='yellowbrick', ax=ax2)
+        print('silhouette',silhouette_visualizer.ax)
+        silhouette_visualizer.fit(self.cleaned_data)
+        silhouette_visualizer.finalize()
+        ax2.set_title("Silhouette Plot")
+
+        # PCA plot 
         pca = PCA(n_components=2)
         X_pca = pca.fit_transform(self.cleaned_data)
+        scatter = ax3.scatter(
+            X_pca[:, 0], X_pca[:, 1], c=self.kmeans.labels_, cmap="viridis", s=50
+        )
+        
+        ax3.set_title("PCA Plot")
+        ax3.set_xlabel("PC1")
+        ax3.set_ylabel("PC2")
+        
+        # Add legend for PCA plot
+        legend_labels = [f"Cluster {i}" for i in np.unique(self.kmeans.labels_)]
+        ax3.legend(
+            handles=scatter.legend_elements()[0],
+            labels=legend_labels,
+            title="Clusters",
+            bbox_to_anchor=(1.05, 1),
+            loc="upper left",
+        )
 
         cluster_names = ['cluster 1','cluster 2','cluster 3']
-        # Plot
-        plt.scatter(X_pca[:, 0], X_pca[:, 1], c=kmeans.labels_, cmap='viridis', s=50)
-        # Create custom legend handles
+        ax4.scatter(self.cleaned_data['longitude'],self.cleaned_data['latitude'], c=self.kmeans.labels_, cmap='viridis', s=50)
+        ax4.scatter(self.kmeans.cluster_centers_[:, -4], self.kmeans.cluster_centers_[:, -5], c='red', s=200, alpha=0.7)
         legend_elements = [
             Line2D([0], [0], marker='o', color='w', label=cluster_names[i], 
                 markerfacecolor=plt.cm.viridis(i / (len(cluster_names) - 1)), markersize=10)
             for i in range(len(cluster_names))
         ]
         # Add legend
-        plt.legend(handles=legend_elements, title='Clusters', bbox_to_anchor=(1.05, 1), loc='upper left')
-        plt.title('K-means Clustering with PCA')
-        plt.xlabel('Principal Component 1')
-        plt.ylabel('Principal Component 2')
-        plt.show()
+        ax4.legend(handles=legend_elements, title='Clusters', bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax4.set_title('K-means clusters with their centroids')
+        ax4.set_xlabel('longitude')
+        ax4.set_ylabel('latitude')
+
+        
 
         # Explained variance ratio
-        explained_variance_ratio = pca.explained_variance_ratio_
-        print("Explained Variance Ratio per Component:", explained_variance_ratio)
+        self.explained_variance_ratio = pca.explained_variance_ratio_
+        print("Explained Variance Ratio per Component:",  self.explained_variance_ratio)
 
         # Cumulative explained variance
-        cumulative_explained_variance = explained_variance_ratio.cumsum()
-        print("Cumulative Explained Variance:", cumulative_explained_variance)
+        self.cumulative_explained_variance = self.explained_variance_ratio.cumsum()
+        print("Cumulative Explained Variance:", self.cumulative_explained_variance)
 
         #loading 
-        components = pca.components_
+        self.loadings = pca.components_
         # Rank features by importance for each component
-        for i, component in enumerate(abs(components)):
+        for i, component in enumerate(abs(self.loadings)):
             ranked_features = pd.Series(component, index=self.cleaned_data.columns).sort_values(ascending=False)
             print(f"Top Features for PC{i+1}:\n", ranked_features.head(5))
+        
+        return fig
 
 
     def process_input(self, preferences):
@@ -149,17 +191,21 @@ class Recommender():
         cosine_sim = cosine_similarity(self.user_input,clusters_recc)
         # Rank races by similarity
         clusters_recc['similarity'] = cosine_sim[0]
-        recommendations = clusters_recc.sort_values(by='similarity', ascending=False)
-        self.recommendations = self.data.loc[recommendations.index]
-        return self.recommendations.head(top_n)
+        self.recommended = clusters_recc.sort_values(by='similarity', ascending=False)
+        recommendations= self.data.loc[self.recommended.index]
+        return recommendations.head(top_n)
         
 
-    def inspet_recommendations(self):
-
+    def explain_recommendations(self):
+        #data_recc = self.recommended.copy()
+        #data_recc = data_recc.drop(['name','country','city','image','link'],axis=1)
         # Calculate the correlation between each feature and the similarity score
-        correlation_with_similarity = self.recommendations.corr()['similarity'].sort_values(ascending=False)
+        correlation_with_similarity = self.recommended.corr()['similarity'].sort_values(ascending=False)
         correlation_with_similarity.drop('similarity', inplace=True)
         correlation_with_similarity.dropna(inplace=True)
+        return correlation_with_similarity
+    
+    def plot_correlation(self,correlation_with_similarity):
         # Plot the correlation
         fig = px.bar(
             x=correlation_with_similarity.index,
@@ -167,14 +213,14 @@ class Recommender():
             labels={'x': 'Features', 'y': 'Correlation with Similarity'},
             title='Correlation of Features with Cosine Similarity Score'
         )
+        return fig 
 
-        # Show the plot
-        fig.show()
+        
 
 
 def main():
     
-    table  = pd.read_csv('../data/utmb_data_clean.csv')
+    table  = pd.read_csv('data/utmb_data_clean.csv')
     preferences = {
         'distance':[20,80],
         'style':["Mountain","Forest",'Stages'],
@@ -186,10 +232,14 @@ def main():
     }
     recommender = Recommender(table)
     recommendations = recommender.recommend(preferences)
-    print(recommendations)
-    recommender.inspet_recommendations()
-    recommender.inspect_kmeans()
-
+    
+    explanation = recommender.explain_recommendations()
+    plot = recommender.plot_correlation(explanation)
+    k_means_fig = recommender.inspect_kmeans()
+    print(recommender.explained_variance_ratio)
+    plt.show()
+    plot.show()
+    
 
 
 if __name__ == '__main__':

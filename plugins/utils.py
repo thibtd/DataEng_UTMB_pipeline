@@ -1,6 +1,8 @@
 from geopy.geocoders import Nominatim
 import re, datetime 
 import pandas as pd
+import wordninja
+
 def round_to_nearest_5(x:float)->float:
     x:float = float(x)
     return round(x/5)*5
@@ -57,3 +59,33 @@ def clean_dates(row:pd.Series)->tuple:
         month = datetime.datetime.strptime(month_name, '%B').month 
         year = int(dates[1])
     return multidays, start_day, end_day,month,year, duration
+
+# Function to retrieve offered distances for a row
+def get_offered_X(row:pd.Series, prefix:str, prefix_sep:str='_')->str:
+    
+    cols_name = prefix_sep.join([prefix,prefix_sep])
+    if prefix_sep in prefix:
+        cols_name = prefix
+
+    # Filter columns that start with 'X'
+    distance_columns = [col for col in row.index if col.startswith(cols_name)]
+    
+    # Extract columns where the flag is True
+    offered_distances = [col.replace(cols_name, '') for col in distance_columns if row[col]]
+    
+    # Join the distances into a comma-separated string
+    return ', '.join(offered_distances)
+
+
+def split_into_words(input_string):
+    replacements = {
+        'S': 'Sand',
+        'U': 'UTMB'
+    }
+    remove = ['and','TMB' ]
+    # Use wordninja to split the string
+    words = wordninja.split(input_string)
+    words = [replacements.get(word, word) for word in words]
+    words = [word for word in words if word not in remove]
+    return ' '.join(words)
+
