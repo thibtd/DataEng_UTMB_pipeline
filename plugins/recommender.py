@@ -187,6 +187,8 @@ def main():
     recommender = Recommender(table)
     recommendations = recommender.recommend(preferences)
     print(recommendations)
+    recommender.inspet_recommendations()
+    recommender.inspect_kmeans()
 
 
 
