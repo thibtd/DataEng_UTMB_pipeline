@@ -1,4 +1,3 @@
-
 import pandas as pd
 import duckdb
 import numpy as np
@@ -12,6 +11,7 @@ from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import plotly.express as px
 
+pd.set_option('future.no_silent_downcasting', True)
 class Recommender():
     def __init__(self, data):
         self.scaler = StandardScaler()
@@ -41,6 +41,7 @@ class Recommender():
         # replace nan with 0
         self.data['duration'] = self.data['duration'].fillna(0)
         self.data['multidays'] = self.data['multidays'].fillna(False)
+        self.data['multidays'] = self.data['multidays'].astype(bool)
         
     
     def preprocess(self):
@@ -153,30 +154,39 @@ class Recommender():
         flattened_prefs = {
             f"{key}_{value}": True for key, values in preferences.items() if isinstance(values, list) for value in values
         }
-
+        print(flattened_prefs)
         # Include non-list values as they are except country
         flattened_prefs.update({key: value for key, value in preferences.items() if key !='country' and  not isinstance(value, list)})
-        print(flattened_prefs)
+
 
         # Replace 'country' with latitude and longitude
         lat, lon = get_lat_long(preferences['country'])
         flattened_prefs["latitude"] = lat
         flattened_prefs["longitude"] = lon
 
+        print(flattened_prefs)
+
+        # Create a DataFrame from the flattened preferences
         user_pref = pd.DataFrame(data = flattened_prefs, columns=self.cleaned_data.columns,index=[0])
-        user_pref['year'] = user_pref['year'].astype(int)
+
+        user_pref['year'] = user_pref['year'].fillna(0).astype(int)
+
         cat_columns = self.cleaned_data.select_dtypes(include=['bool']).columns
         numeric_columns = self.cleaned_data.select_dtypes(include=['number']).columns
+
         user_pref[cat_columns] = user_pref[cat_columns].fillna(False).astype(bool)
         user_pref[numeric_columns] = user_pref[numeric_columns].fillna(0).astype(int)
+
         numeric_columns = numeric_columns.drop(['latitude','longitude'])
+       
         X_scaled = self.scaler.transform(user_pref[numeric_columns])
+
         user_pref = user_pref.drop(numeric_columns, axis=1)
         user_pref = pd.concat([user_pref, pd.DataFrame(X_scaled, columns=numeric_columns)], axis=1)
-        
+    
         return user_pref
 
-    def recommend(self,user_input,top_n=5):
+    def recommend(self,user_input:dict,top_n:int=5, weight:bool=False,to_be_inc:str=None):
         
         self.user_input = self.process_input(user_input)
         distances = self.kmeans.transform(self.user_input)
@@ -189,6 +199,7 @@ class Recommender():
 
         # use cosine similarity to find the most similar event wihtin the cluster
         cosine_sim = cosine_similarity(self.user_input,clusters_recc)
+
         # Rank races by similarity
         clusters_recc['similarity'] = cosine_sim[0]
         self.recommended = clusters_recc.sort_values(by='similarity', ascending=False)
@@ -231,8 +242,9 @@ def main():
         'disipline':['Trail']
     }
     recommender = Recommender(table)
+    print('recommendations')
     recommendations = recommender.recommend(preferences)
-    
+    print(recommendations.head())
     explanation = recommender.explain_recommendations()
     plot = recommender.plot_correlation(explanation)
     k_means_fig = recommender.inspect_kmeans()

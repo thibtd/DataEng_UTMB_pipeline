@@ -62,11 +62,9 @@ def clean_dates(row:pd.Series)->tuple:
 
 # Function to retrieve offered distances for a row
 def get_offered_X(row:pd.Series, prefix:str, prefix_sep:str='_')->str:
-    
-    cols_name = prefix_sep.join([prefix,prefix_sep])
+    cols_name = prefix+prefix_sep
     if prefix_sep in prefix:
         cols_name = prefix
-
     # Filter columns that start with 'X'
     distance_columns = [col for col in row.index if col.startswith(cols_name)]
     
