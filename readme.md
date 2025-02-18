@@ -1,24 +1,28 @@
-# UTMB Event Data Pipeline
+# UTMB Event Data Pipeline & Recommender System
 
-A data pipeline that extracts and processes race information from all UTMB (Ultra-Trail du Mont-Blanc) World Series events listed on Finishers.com. This pipeline collects comprehensive data about trail running races that are part of the UTMB circuit worldwide.
+A comprehensive system that extracts race information from UTMB (Ultra-Trail du Mont-Blanc) World Series events and provides personalized race recommendations.
 
 ## Project Overview
 
-This project automatically extracts data about UTMB races from Finishers.com, including:
-- Race names and locations
-- Race distances and elevation gains
-- Event dates and confirmation status
-- Race disciplines and styles
-- Geographic coordinates
-- Event images and links
+This project consists of two main components:
+1. A data pipeline that automatically extracts data from Finishers.com
+2. A recommender system with an interactive web interface for personalized race suggestions
+
+### Features:
+- Automated data extraction from UTMB World Series events
+- Machine learning-based race recommendations
+- Interactive web interface for exploring races
+- Visualization of race locations and characteristics
+- Customizable search based on user preferences
 
 Technologies used:
 - Apache Airflow for workflow orchestration
 - Selenium for web scraping
-- PostgreSQL for metadata storage
-- Redis for task queue management
+- PostgreSQL & DuckDB for data storage
+- Streamlit for web interface
+- Scikit-learn for machine learning
+- Folium for interactive maps
 - Docker for containerization
-- DuckDB for data storage and querying
 
 ## Project Structure
 
@@ -26,6 +30,9 @@ Technologies used:
 utmb_data_eng/
 ├── dags/              # Airflow DAG definitions
 ├── plugins/           # Custom plugins and pipeline code
+│   ├── recommender.py # Race recommendation system
+│   └── utils.py      # Utility functions
+├── app.py            # Streamlit web application
 ├── config/           # Configuration files
 ├── data/            # Data storage
 ├── tests/           # Test files
@@ -72,7 +79,6 @@ make run_dag
    - Navigates through multiple pages of events
    - Handles dynamic content loading using Selenium
 
-
 2. **Transform**: 
    - Cleans and structures race information
    - Processes distances and creates distance-specific flags
@@ -84,6 +90,36 @@ make run_dag
    - Saves processed data to CSV format
    - Stores data in DuckDB for efficient querying
    - Maintains table 'UTMB' with latest race information
+
+4. **Recommend**:
+   - K-means clustering of races based on features
+   - Cosine similarity for finding similar races
+   - User preference-based filtering
+   - Interactive visualization of recommendations
+
+## Using the Recommender System
+
+1. Start the Streamlit app:
+```bash
+streamlit run app.py
+```
+
+2. Access the web interface:
+- Navigate to the provided local URL (typically http://localhost:8501)
+- Use the "Overview" tab to explore all races
+- Use the "Get recommendations" tab to get personalized suggestions
+
+3. Enter your preferences:
+- Desired race distance
+- Preferred race style and discipline
+- Target date and location
+- Single-day or multi-day event preference
+
+4. View recommendations:
+- See suggested races on an interactive map
+- Explore race details and images
+- Access direct links to race websites
+- Understand recommendation explanations through feature importance visualization
 
 ## Development
 

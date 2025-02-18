@@ -3,7 +3,7 @@ install:
 		pip install -r requirements.txt
 
 test:
-	python -m pytest -vvv
+	python -m pytest -vvv --cov
 	
 test_local:
 	chmod +x bash_files/test_local.sh
