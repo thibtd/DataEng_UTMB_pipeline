@@ -1,3 +1,4 @@
+[![Make test](https://github.com/thibtd/DataEng_UTMB_pipeline/actions/workflows/main.yml/badge.svg)](https://github.com/thibtd/DataEng_UTMB_pipeline/actions/workflows/main.yml) [![update data](https://github.com/thibtd/DataEng_UTMB_pipeline/actions/workflows/dataPipeline.yml/badge.svg)](https://github.com/thibtd/DataEng_UTMB_pipeline/actions/workflows/dataPipeline.yml)
 # UTMB Event Data Pipeline & Recommender System
 
 A comprehensive system that extracts race information from UTMB (Ultra-Trail du Mont-Blanc) World Series events and provides personalized race recommendations.
