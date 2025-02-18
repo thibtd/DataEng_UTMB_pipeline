@@ -1,6 +1,8 @@
-name: Makefile CI
+name: update data
 
 on:
+  schedule:
+   - cron: "20 14 18 1-12 *"
   push:
     branches: 
       - main
