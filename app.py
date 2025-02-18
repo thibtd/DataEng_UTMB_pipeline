@@ -129,6 +129,7 @@ def streamlit_app():
         map_st = st_folium(plot_map, width=1300, height=700, returned_objects=[])
 
     with tab2:
+        st.header('Enter your preferences')
         st.write('Please fill the following information to get recommendations')
         preferences = {}
         col1,col2 = st.columns(2)
@@ -152,13 +153,25 @@ def streamlit_app():
         preferences['multidays'] = map_to_multidays[multidays]
         preferences['country'] = country_select if country_select else ''
         preferences['city'] = city_select if city_select else ''
-        st.write(preferences)
-        print(preferences)
-        st.write("Based on your preferences, here are the recommendations:")
+        
 
-        recommendations = recommender.recommend(preferences, top_n=top_k)
-        st.write(recommendations)
-        print(recommendations)
+        st.header("Based on your preferences, here are the recommendations:")
+
+        recommendations = recommender.recommend(preferences, top_n=top_k).reset_index()
+        months = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'}
+
+        data_recc = pd.DataFrame(data = recommendations, columns = ['image','name','city','country','month','year','link'])
+        data_recc['month'] = data_recc['month'].map(months)
+        st.data_editor(data_recc, column_config={
+            "image": st.column_config.ImageColumn(
+                "Preview Image", help="Race vignette"
+            ),
+            "link": st.column_config.LinkColumn("More information", help="Link to the event website",display_text="More information")
+            },
+            hide_index=True,
+        )
+        
+
         plot_map_rec = plot_to_map(recommendations.reset_index(),clustered=False, kmeans=None,zoom=4)
         map_rec = st_folium(plot_map_rec, width=1300, height=700, returned_objects=[])
 
