@@ -9,6 +9,11 @@ This project consists of two main components:
 1. A data pipeline that automatically extracts data from Finishers.com
 2. A recommender system with an interactive web interface for personalized race suggestions
 
+## Data pipeline
+
+![Data Pipeline Schema](assets/schema.png)
+
+
 ### Features:
 - Automated data extraction from UTMB World Series events
 - Machine learning-based race recommendations
