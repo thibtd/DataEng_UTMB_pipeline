@@ -1,7 +1,9 @@
+from airflow import XComArg
 from airflow.decorators import dag, task
 from datetime import datetime
-import os, sys, json, duckdb
+import os, sys
 import pandas as pd
+from typing import cast
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from plugins.utmb_pipeline import (
@@ -33,21 +35,31 @@ def utmb_flow():
         return data_complete
 
     @task()  # transform data
-    def utmb_transform(data: dict) -> pd.DataFrame:
+    def utmb_transform(data: list) -> pd.DataFrame:
         print(data)
         print(type(data))
         data_transformed = utmb_transform_data(data)
         df = pd.DataFrame(data_transformed)
         return df
+    
+    @task()
+    def utmb_vectorize_embedding(data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Placeholder for embedding vectorization task.
+        This function can be expanded to include actual embedding logic.
+        """
+        # For now, just return the data as is
+        return data
 
-    @task()  # load data to csv
+    @task()  # load data to duckdb
     def utmb_load(data_cleaned: pd.DataFrame):
 
         load_data_to_db(data_cleaned)
 
-    raw_data: dict = utmb_extract()
-    transformed_data: list = utmb_transform(raw_data)
-    utmb_load(transformed_data)
+    raw_data: XComArg = utmb_extract()
+    transformed_data: XComArg = utmb_transform(cast(list,raw_data))
+    vectorized_data: XComArg = utmb_vectorize_embedding(cast(pd.DataFrame,transformed_data))
+    utmb_load(cast(pd.DataFrame,vectorized_data))
 
 
 utmb_flow()

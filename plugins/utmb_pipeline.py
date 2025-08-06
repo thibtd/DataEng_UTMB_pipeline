@@ -7,11 +7,12 @@ import pandas as pd
 import numpy as np
 from bs4 import BeautifulSoup
 from emoji import replace_emoji
-import re, os, sys, time, json, datetime, bs4
+import re, os, sys, time, bs4
 import duckdb
+from langchain_huggingface import HuggingFaceEmbeddings
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from plugins.utils import round_to_nearest_5, get_lat_long, clean_dates
+from plugins.utils import round_to_nearest_5, get_lat_long, clean_dates, get_offered_X
 
 
 def utmb_extract_page(url: str, local: bool = False) -> str:
@@ -90,8 +91,8 @@ def utmb_extract_clean_data(data: bs4.element.ResultSet) -> list:
     return data_cleaned
 
 
-def utmb_transform_data(data: list) -> pd.DataFrame:
-    data: pd.DataFrame = pd.DataFrame(data)
+def utmb_transform_data(d: list) -> pd.DataFrame:
+    data: pd.DataFrame = pd.DataFrame(d)
     # remove  "by UTMB®" in name
     data.loc[:, "name"] = data["name"].str.replace("by UTMB®", "")
 
@@ -99,7 +100,7 @@ def utmb_transform_data(data: list) -> pd.DataFrame:
     data["distances"] = (
         data["distances"].str.replace("km", "").str.strip().str.split("\xa0")
     )
-    unique_distances: np.array = (
+    unique_distances: np.ndarray = (
         data["distances"].explode().astype(float).apply(round_to_nearest_5).unique()
     )
     data["distances"] = data["distances"].apply(
@@ -124,7 +125,7 @@ def utmb_transform_data(data: list) -> pd.DataFrame:
         .str.strip()
         .str.split("\xa0")
     )
-    styles_unique: np.array = data["styles"].explode().unique()
+    styles_unique: np.ndarray = data["styles"].explode().unique()
     for style in sorted(styles_unique):
         data["style_" + str(style)] = data["styles"].apply(lambda x: style in x)
 
@@ -135,7 +136,7 @@ def utmb_transform_data(data: list) -> pd.DataFrame:
         .str.strip()
         .str.split("\xa0")
     )
-    discipline_unique: np.array = data["discipline"].explode().unique()
+    discipline_unique: np.ndarray = data["discipline"].explode().unique()
     for disip in sorted(discipline_unique):
         data["discipline_" + str(disip)] = data["discipline"].apply(
             lambda x: disip in x
@@ -158,36 +159,74 @@ def utmb_transform_data(data: list) -> pd.DataFrame:
 
     return data
 
+def utmb_rag_readiness(d:pd.DataFrame)-> pd.DataFrame:
+    """
+    Transform each row into a 'chunck' of text data including all relevant information and increasing its semantic richness.
+    Embed the chunck of text data into a vector representation.
+    add 2 columns to the dataframe: 'description' and 'embeddings' 
+    """
+    chunks: list = []
+    print("Creating chunks of text data for RAG readiness...")
+    print("length:", d.shape[0])
+    for i in range(d.shape[0]):
+        disciplines = get_offered_X(row=d.iloc[i], prefix='discipline')
+        distances = get_offered_X(row=d.iloc[i], prefix='distance')
+        styles = get_offered_X(row=d.iloc[i], prefix='style')
+        chunk = f"""{d.name} takes place in {d.iloc[i].city}, {d.iloc[i].country} on {d.iloc[i].start_day}/{d.iloc[i].month}/{d.iloc[i].year}.
+                The different distances offered are {distances} km, the disciplines are {disciplines} and the styles are {styles}.
+                The event is {'multidays' if d.iloc[i].multidays else 'single day'} and lasts {d.iloc[i].duration} {'days' if d.iloc[i].multidays else 'day'}."""
+        chunks.append(chunk)
+    d["description"] = chunks
+    print("Embedding the chunks of text data...")
+    embeddings_model = HuggingFaceEmbeddings(model_name="intfloat/e5-small-v2", model_kwargs={'device': 'mps'},
+    encode_kwargs={'batch_size': 8})
+    print(embeddings_model)
+    embeddings = embeddings_model.embed_documents(chunks)
+    d["embeddings"] = embeddings
+    print(d.head())
+    return d
 
-def load_data_to_db(data: pd.DataFrame) -> str:
+
+def load_data_to_db(data: pd.DataFrame) -> None:
     """
     load the dataFrame to a duckdb instance
     """
-    conn = duckdb.connect("data/utmb_db.duckdb")
+    emebeddings_size = len(data["embeddings"].iloc[0])
+    print(f"Embedding size: {emebeddings_size}")
+    conn = duckdb.connect("data_test/utmb_db.duckdb")
     duck_tables = conn.sql("show all tables").df()
     if "UTMB" in duck_tables["name"].values:
         conn.sql("DROP TABLE UTMB")
-    conn.sql("CREATE TABLE UTMB AS SELECT * FROM data;")
+    conn.sql("""
+             INSTALL vss;
+             LOAD vss;
+             set hnsw_enable_experimental_persistence = true;
+             CREATE TABLE UTMB AS SELECT * EXCLUDE (embeddings),
+    CAST(embeddings AS FLOAT[384]) AS embeddings FROM data;""")
+    conn.sql("""CREATE INDEX cos_idx ON UTMB USING HNSW (embeddings)
+                WITH (metric = 'cosine');""")
     return print("data successfully saved to duckDB")
 
 
 if __name__ == "__main__":
     data_complete = []
+    '''
     for p in range(1, 4):  # there are 3 pages with races
-        url = f"https://www.finishers.com/en/events?page={p}&tags=utmbevent"
+        url = f"https://www.finishers.com/en/courses?page={p}&series=utmbevent"
         page = utmb_extract_page(url, local=True)
-        data = utmb_extract_data(page)
-        data = utmb_extract_clean_data(data)
-        data_complete.extend(data)
+        data_raw = utmb_extract_data(page)
+        data_cleaned = utmb_extract_clean_data(data_raw)
+        data_complete.extend(data_cleaned)
         print(len(data_complete))
-
-    pd.DataFrame(data_complete).to_csv("data/utmb_data_raw.csv", index=False)
-    # data_complete = pd.read_csv('data/utmb_data_raw.csv')
+    '''
+    #pd.DataFrame(data_complete).to_csv("data/utmb_data_raw.csv", index=False)
+    data_complete = pd.read_csv('data/utmb_data_raw.csv')
     data_cleaned = utmb_transform_data(data_complete)
+    data_cleaned = utmb_rag_readiness(data_cleaned)
     data_cleaned.to_csv("data/utmb_data_clean.csv", index=False)
     data_cleaned = pd.read_csv("data/utmb_data_clean.csv")
     load_data_to_db(data_cleaned)
-    conn = duckdb.connect("data/utmb_db.duckdb")
+    conn = duckdb.connect("data_test/utmb_db.duckdb")
     data_cleaned = conn.sql("select * from UTMB")
     print(data_cleaned)
     tables = conn.sql("SHOW ALL TABLES")
