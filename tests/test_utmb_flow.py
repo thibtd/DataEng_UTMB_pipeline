@@ -73,9 +73,10 @@ class TestUTMBFlow(unittest.TestCase):
         result = utmb_extract_task.python_callable()
 
         expected = [
-            "https://www.finishers.com/en/events?page=1&tags=utmbevent_clean",
-            "https://www.finishers.com/en/events?page=2&tags=utmbevent_clean",
-            "https://www.finishers.com/en/events?page=3&tags=utmbevent_clean",
+
+            "https://www.finishers.com/en/courses?page=1&series=utmbevent_clean",
+            "https://www.finishers.com/en/courses?page=2&series=utmbevent_clean",
+             "https://www.finishers.com/en/courses?page=3&series=utmbevent_clean"
         ]
         self.assertEqual(result, expected)
 
