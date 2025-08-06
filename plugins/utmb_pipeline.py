@@ -91,7 +91,7 @@ def utmb_extract_clean_data(data: bs4.element.ResultSet) -> list:
     return data_cleaned
 
 
-def utmb_transform_data(d: list) -> pd.DataFrame:
+def utmb_transform_data(d: list|pd.DataFrame) -> pd.DataFrame:
     data: pd.DataFrame = pd.DataFrame(d)
     # remove  "by UTMB®" in name
     data.loc[:, "name"] = data["name"].str.replace("by UTMB®", "")
@@ -172,13 +172,13 @@ def utmb_rag_readiness(d:pd.DataFrame)-> pd.DataFrame:
         disciplines = get_offered_X(row=d.iloc[i], prefix='discipline')
         distances = get_offered_X(row=d.iloc[i], prefix='distance')
         styles = get_offered_X(row=d.iloc[i], prefix='style')
-        chunk = f"""{d.name} takes place in {d.iloc[i].city}, {d.iloc[i].country} on {d.iloc[i].start_day}/{d.iloc[i].month}/{d.iloc[i].year}.
-                The different distances offered are {distances} km, the disciplines are {disciplines} and the styles are {styles}.
-                The event is {'multidays' if d.iloc[i].multidays else 'single day'} and lasts {d.iloc[i].duration} {'days' if d.iloc[i].multidays else 'day'}."""
+        chunk = f"""{d.name.iloc[i]} takes place in {d.city.iloc[i]}, {d.country.iloc[i]} on {f'{int(d.start_day.iloc[i])}/' if d.date_confirmed.iloc[i] ==True else ''}{int(d.month.iloc[i])}/{int(d.year.iloc[i])}.
+            The different distances offered are {distances} km, the disciplines are {disciplines} and the styles are {styles}.
+            The event is {'multidays' if d.multidays.iloc[i] else 'single day'} and lasts {d.duration.iloc[i]} {'days' if d.multidays.iloc[i] else 'day'}."""
         chunks.append(chunk)
     d["description"] = chunks
     print("Embedding the chunks of text data...")
-    embeddings_model = HuggingFaceEmbeddings(model_name="intfloat/e5-small-v2", model_kwargs={'device': 'mps'},
+    embeddings_model = HuggingFaceEmbeddings(model_name="intfloat/e5-small-v2",
     encode_kwargs={'batch_size': 8})
     print(embeddings_model)
     embeddings = embeddings_model.embed_documents(chunks)
@@ -193,7 +193,7 @@ def load_data_to_db(data: pd.DataFrame) -> None:
     """
     emebeddings_size = len(data["embeddings"].iloc[0])
     print(f"Embedding size: {emebeddings_size}")
-    conn = duckdb.connect("data_test/utmb_db.duckdb")
+    conn = duckdb.connect("data/utmb_db.duckdb")
     duck_tables = conn.sql("show all tables").df()
     if "UTMB" in duck_tables["name"].values:
         conn.sql("DROP TABLE UTMB")

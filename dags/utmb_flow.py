@@ -12,6 +12,7 @@ from plugins.utmb_pipeline import (
     utmb_extract_clean_data,
     utmb_transform_data,
     load_data_to_db,
+    utmb_rag_readiness
 )
 
 
@@ -27,7 +28,7 @@ def utmb_flow():
         data_complete = []
         for p in range(1, 4):  # there are 3 pages with races
             page = utmb_extract_page(
-                f"https://www.finishers.com/en/events?page={p}&tags=utmbevent"
+                f"https://www.finishers.com/en/courses?page={p}&series=utmbevent"
             )
             data = utmb_extract_data(page)
             data = utmb_extract_clean_data(data)
@@ -48,7 +49,8 @@ def utmb_flow():
         Placeholder for embedding vectorization task.
         This function can be expanded to include actual embedding logic.
         """
-        # For now, just return the data as is
+        data = utmb_rag_readiness(data)
+        
         return data
 
     @task()  # load data to duckdb

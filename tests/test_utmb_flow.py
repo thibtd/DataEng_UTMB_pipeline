@@ -22,7 +22,6 @@ class TestUTMBFlow(unittest.TestCase):
     def test_dag_configuration(self):
         """Test DAG configuration parameters"""
         dag_obj = utmb_flow()
-        # self.assertEqual(dag_obj.start_date, datetime(2025, 1, 15))
         self.assertEqual(dag_obj.schedule_interval, None)
         self.assertEqual(dag_obj.catchup, False)
         self.assertEqual(dag_obj.default_args["owner"], "Thibaut Donis")
@@ -31,33 +30,7 @@ class TestUTMBFlow(unittest.TestCase):
         """Test that tasks are properly connected"""
         dag_obj = utmb_flow()
         tasks = dag_obj.tasks
-        self.assertEqual(len(tasks), 3)  # Should have 3 tasks
-
-        # Test task order
-        task_ids = [task.task_id for task in tasks]
-        self.assertIn("utmb_extract", task_ids)
-        self.assertIn("utmb_transform", task_ids)
-        self.assertIn("utmb_load", task_ids)
-
-
-class TestUTMBFlow(unittest.TestCase):
-    def test_dag_loading(self):
-        """Test that the DAG can be properly loaded"""
-        dag_obj = utmb_flow()
-        self.assertIsNotNone(dag_obj)
-
-    def test_dag_configuration(self):
-        """Test DAG configuration parameters"""
-        dag_obj = utmb_flow()
-        self.assertEqual(dag_obj.schedule_interval, None)
-        self.assertEqual(dag_obj.catchup, False)
-        self.assertEqual(dag_obj.default_args["owner"], "Thibaut Donis")
-
-    def test_task_dependencies(self):
-        """Test that tasks are properly connected"""
-        dag_obj = utmb_flow()
-        tasks = dag_obj.tasks
-        self.assertEqual(len(tasks), 3)  # Should have 3 tasks
+        self.assertEqual(len(tasks), 4)  # Should have 4 tasks
         task_ids = [task.task_id for task in tasks]
         self.assertIn("utmb_extract", task_ids)
         self.assertIn("utmb_transform", task_ids)
