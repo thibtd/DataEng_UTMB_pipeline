@@ -95,6 +95,9 @@ def utmb_transform_data(d: list|pd.DataFrame) -> pd.DataFrame:
     data: pd.DataFrame = pd.DataFrame(d)
     # remove  "by UTMB®" in name
     data.loc[:, "name"] = data["name"].str.replace("by UTMB®", "")
+    data.loc[:, "name"] = data["name"].str.replace("by UTMB ®", "")
+    data.loc[:, "name"] = data["name"].str.strip()
+
 
     # in distances remove "km" and split by " " and make dummies
     data["distances"] = (
@@ -172,7 +175,7 @@ def utmb_rag_readiness(d:pd.DataFrame)-> pd.DataFrame:
         disciplines = get_offered_X(row=d.iloc[i], prefix='discipline')
         distances = get_offered_X(row=d.iloc[i], prefix='distance')
         styles = get_offered_X(row=d.iloc[i], prefix='style')
-        chunk = f"""{d.name.iloc[i]} takes place in {d.city.iloc[i]}, {d.country.iloc[i]} on {f'{int(d.start_day.iloc[i])}/' if d.date_confirmed.iloc[i] ==True else ''}{int(d.month.iloc[i])}/{int(d.year.iloc[i])}.
+        chunk = f"""passage: {d.name.iloc[i]} takes place in {d.city.iloc[i]}, {d.country.iloc[i]} on {f'{int(d.start_day.iloc[i])}/' if d.date_confirmed.iloc[i] ==True else ''}{int(d.month.iloc[i])}/{int(d.year.iloc[i])}.
             The different distances offered are {distances} km, the disciplines are {disciplines} and the styles are {styles}.
             The event is {'multidays' if d.multidays.iloc[i] else 'single day'} and lasts {d.duration.iloc[i]} {'days' if d.multidays.iloc[i] else 'day'}."""
         chunks.append(chunk)
@@ -193,18 +196,22 @@ def load_data_to_db(data: pd.DataFrame) -> None:
     """
     emebeddings_size = len(data["embeddings"].iloc[0])
     print(f"Embedding size: {emebeddings_size}")
-    conn = duckdb.connect("data/utmb_db.duckdb")
+    conn = duckdb.connect("data_test/utmb_db.duckdb")
     duck_tables = conn.sql("show all tables").df()
     if "UTMB" in duck_tables["name"].values:
-        conn.sql("DROP TABLE UTMB")
+        conn.sql("""
+                 INSTALL vss;
+                LOAD vss;
+                 DROP TABLE UTMB""")
     conn.sql("""
              INSTALL vss;
              LOAD vss;
              set hnsw_enable_experimental_persistence = true;
-             CREATE TABLE UTMB AS SELECT * EXCLUDE (embeddings),
-    CAST(embeddings AS FLOAT[384]) AS embeddings FROM data;""")
-    conn.sql("""CREATE INDEX cos_idx ON UTMB USING HNSW (embeddings)
+             CREATE TABLE UTMB AS SELECT row_number() OVER () AS id, * EXCLUDE (embeddings),
+    CAST(embeddings AS FLOAT[384]) AS embeddings,'{ "name": "' || name || '" }' AS metadata FROM data;""")
+    conn.sql("""CREATE INDEX cos_idx ON UTMB USING HNSW(embeddings)
                 WITH (metric = 'cosine');""")
+    print(conn.sql("DESCRIBE UTMB"))
     return print("data successfully saved to duckDB")
 
 
