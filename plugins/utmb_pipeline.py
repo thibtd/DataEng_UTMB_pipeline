@@ -162,56 +162,18 @@ def utmb_transform_data(d: list|pd.DataFrame) -> pd.DataFrame:
 
     return data
 
-def utmb_rag_readiness(d:pd.DataFrame)-> pd.DataFrame:
-    """
-    Transform each row into a 'chunck' of text data including all relevant information and increasing its semantic richness.
-    Embed the chunck of text data into a vector representation.
-    add 2 columns to the dataframe: 'description' and 'embeddings' 
-    """
-    chunks: list = []
-    print("Creating chunks of text data for RAG readiness...")
-    print("length:", d.shape[0])
-    for i in range(d.shape[0]):
-        disciplines = get_offered_X(row=d.iloc[i], prefix='discipline')
-        distances = get_offered_X(row=d.iloc[i], prefix='distance')
-        styles = get_offered_X(row=d.iloc[i], prefix='style')
-        chunk = f"""passage: {d.name.iloc[i]} takes place in {d.city.iloc[i]}, {d.country.iloc[i]} on {f'{int(d.start_day.iloc[i])}/' if d.date_confirmed.iloc[i] ==True else ''}{int(d.month.iloc[i])}/{int(d.year.iloc[i])}.
-            The different distances offered are {distances} km, the disciplines are {disciplines} and the styles are {styles}.
-            The event is {'multidays' if d.multidays.iloc[i] else 'single day'} and lasts {d.duration.iloc[i]} {'days' if d.multidays.iloc[i] else 'day'}."""
-        chunks.append(chunk)
-    d["description"] = chunks
-    print("Embedding the chunks of text data...")
-    embeddings_model = HuggingFaceEmbeddings(model_name="intfloat/e5-small-v2",
-    encode_kwargs={'batch_size': 8})
-    print(embeddings_model)
-    embeddings = embeddings_model.embed_documents(chunks)
-    d["embeddings"] = embeddings
-    print(d.head())
-    return d
 
 
 def load_data_to_db(data: pd.DataFrame) -> None:
     """
     load the dataFrame to a duckdb instance
     """
-    emebeddings_size = len(data["embeddings"].iloc[0])
-    print(f"Embedding size: {emebeddings_size}")
-    conn = duckdb.connect("data_test/utmb_db.duckdb")
+    conn = duckdb.connect("data/utmb_db.duckdb")
     duck_tables = conn.sql("show all tables").df()
     if "UTMB" in duck_tables["name"].values:
-        conn.sql("""
-                 INSTALL vss;
-                LOAD vss;
-                 DROP TABLE UTMB""")
-    conn.sql("""
-             INSTALL vss;
-             LOAD vss;
-             set hnsw_enable_experimental_persistence = true;
-             CREATE TABLE UTMB AS SELECT row_number() OVER () AS id, * EXCLUDE (embeddings),
-    CAST(embeddings AS FLOAT[384]) AS embeddings,'{ "name": "' || name || '" }' AS metadata FROM data;""")
-    conn.sql("""CREATE INDEX cos_idx ON UTMB USING HNSW(embeddings)
-                WITH (metric = 'cosine');""")
-    print(conn.sql("DESCRIBE UTMB"))
+        print("Table UTMB already exists in duckDB, it will be replaced")   
+        conn.sql("DROP TABLE UTMB")
+    conn.sql("CREATE TABLE UTMB AS SELECT * FROM data;")
     return print("data successfully saved to duckDB")
 
 
@@ -229,11 +191,10 @@ if __name__ == "__main__":
     #pd.DataFrame(data_complete).to_csv("data/utmb_data_raw.csv", index=False)
     data_complete = pd.read_csv('data/utmb_data_raw.csv')
     data_cleaned = utmb_transform_data(data_complete)
-    data_cleaned = utmb_rag_readiness(data_cleaned)
     data_cleaned.to_csv("data/utmb_data_clean.csv", index=False)
     data_cleaned = pd.read_csv("data/utmb_data_clean.csv")
     load_data_to_db(data_cleaned)
-    conn = duckdb.connect("data_test/utmb_db.duckdb")
+    conn = duckdb.connect("datautmb_db.duckdb")
     data_cleaned = conn.sql("select * from UTMB")
     print(data_cleaned)
     tables = conn.sql("SHOW ALL TABLES")

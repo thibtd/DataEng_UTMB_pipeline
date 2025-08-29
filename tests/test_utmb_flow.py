@@ -30,7 +30,7 @@ class TestUTMBFlow(unittest.TestCase):
         """Test that tasks are properly connected"""
         dag_obj = utmb_flow()
         tasks = dag_obj.tasks
-        self.assertEqual(len(tasks), 4)  # Should have 4 tasks
+        self.assertEqual(len(tasks), 3)  # Should have 3 tasks
         task_ids = [task.task_id for task in tasks]
         self.assertIn("utmb_extract", task_ids)
         self.assertIn("utmb_transform", task_ids)

@@ -65,8 +65,7 @@ class Recommender:
                 "city",
                 "image",
                 "link",
-                "date_confirmed",
-                "style_UTMBWorldSeries",
+                "date_confirmed" 
             ],
             axis=1,
         )

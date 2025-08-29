@@ -11,8 +11,7 @@ from plugins.utmb_pipeline import (
     utmb_extract_data,
     utmb_extract_clean_data,
     utmb_transform_data,
-    load_data_to_db,
-    utmb_rag_readiness
+    load_data_to_db
 )
 
 
@@ -42,16 +41,6 @@ def utmb_flow():
         data_transformed = utmb_transform_data(data)
         df = pd.DataFrame(data_transformed)
         return df
-    
-    @task()
-    def utmb_vectorize_embedding(data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Placeholder for embedding vectorization task.
-        This function can be expanded to include actual embedding logic.
-        """
-        data = utmb_rag_readiness(data)
-        
-        return data
 
     @task()  # load data to duckdb
     def utmb_load(data_cleaned: pd.DataFrame):
@@ -60,8 +49,7 @@ def utmb_flow():
 
     raw_data: XComArg = utmb_extract()
     transformed_data: XComArg = utmb_transform(cast(list,raw_data))
-    vectorized_data: XComArg = utmb_vectorize_embedding(cast(pd.DataFrame,transformed_data))
-    utmb_load(cast(pd.DataFrame,vectorized_data))
+    utmb_load(cast(pd.DataFrame,transformed_data))
 
 
 utmb_flow()

@@ -6,3 +6,5 @@ __pycache__/
 data/utmb_data_clean.csv
 data/utmb_data_raw.csv
 /data_test
+.DS_Store
+.coverage

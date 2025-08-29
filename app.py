@@ -2,14 +2,12 @@ import streamlit as st
 import pandas as pd
 import duckdb
 from plugins.recommender import Recommender
-from datetime import datetime, timedelta
+from datetime import datetime
 import folium
 from plugins.utils import get_offered_X
-import matplotlib.pyplot as plt
 import plotly.express as px
 from streamlit_folium import st_folium
-import lime
-import lime.lime_tabular
+
 
 
 def plot_to_map(df:pd.DataFrame,clustered:bool, kmeans,colors:list=['red','green','blue'],zoom = 2)->folium.Map:
@@ -97,10 +95,12 @@ def streamlit_app():
     st.write('This app is a recommender system for ultra races that are part of the UTMB World Series.')
     #  load data and cash the data 
     data = load_data()
+    print(data.head())
+    print(data.columns)
     recommender = Recommender(data)
     # get all the different variables required to be displayed 
     list_of_styles = sorted([col.replace('style_', '') for col in recommender.data.columns if col.startswith('style_')])
-    list_of_styles.remove('') # remove the empty string
+    #list_of_styles.remove('') # remove the empty string
     list_of_distances = [int(col.replace('distance_', '')) for col in recommender.data.columns if col.startswith('distance_')]
     list_of_disciplines = [col.replace('discipline_', '') for col in recommender.data.columns if col.startswith('discipline_')]
     list_of_countries = sorted(data['country'].unique())
