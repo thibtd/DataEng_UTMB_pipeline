@@ -35,4 +35,4 @@ jobs:
           context: .
           file: ./Dockerfile  # Make sure this points to your Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/dataeng_utmb_pipeline:github
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/dataeng_utmb_pipeline:latest
