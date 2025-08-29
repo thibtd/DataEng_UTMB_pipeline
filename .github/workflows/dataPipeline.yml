@@ -2,15 +2,9 @@ name: update data
 
 on:
   schedule:
-   - cron: "20 14 18 1-12 *"
-  push:
-    branches: 
-      - main
-    paths:
-      - 'dags/**'
-      - 'plugins/**'
-      - '.github/workflows/**'
-      - 'data/**'
+   - cron: "20 14 18 * *"
+   
+  workflow_dispatch:
     
 jobs:
   build:
@@ -24,55 +18,24 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
-    - name: Set up Python
-      # This is the version of the action for setting up Python, not the Python version.
-      uses: actions/setup-python@v5
-      with:
-        # Semantic version range syntax or exact version of a Python version
-        python-version: '3.12'
 
-    - name: Create and set permissions for data directory
+    - name: Pull latest Docker image and start services
       run: |
-        mkdir -p data
-        chmod 777 data
-        
-    - name: Set up Docker
-      uses: docker/setup-buildx-action@v2
-      
-    - name: Initialize Docker containers with proper permissions
-      run: |
-        AIRFLOW_UID=$(id -u)
-        AIRFLOW_GID=$(id -g)
-        echo "AIRFLOW_UID=${AIRFLOW_UID}" >> $GITHUB_ENV
-        echo "AIRFLOW_GID=${AIRFLOW_GID}" >> $GITHUB_ENV
-        docker compose up airflow-init
-    
-    - name: Start Docker containers
-      run: |
+        docker compose pull
         docker compose up -d
-        docker exec dataeng_utmb_pipeline-airflow-webserver-1 bash -c "mkdir -p /opt/airflow/data && chmod 777 /opt/airflow/data"
 
     - name: wait for Airflow to start
-      run:  make wait_for_airflow
+      run: make wait_for_airflow
     
-    - name: list DAGS
-      run: docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list
-   
     - name: run DAG
       run: make run_dag_GHActions
 
     - name: Wait for DAG completion
       run: sleep 120
       
-    - name: verify completion
-      run:  docker exec dataeng_utmb_pipeline-airflow-webserver-1 airflow dags list-runs -d utmb_flow
-    
     - name: Git Auto Commit
       uses: stefanzweifel/git-auto-commit-action@v4
       with:
-        commit_message: ran the DAGs and updated the data
+        commit_message: "Ran the DAGs and updated the data"
         push_options: '--force'
-    - name: stop Docker containers
-      run: make stop_docker
 
