@@ -160,8 +160,14 @@ def test_utmb_extract_data():
 
 def test_load_data_to_db(tmp_path):
     # Create test data
-    mock_embeddings = [1*384]  # Mock embedding vector
-    test_data = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"],"embeddings": [mock_embeddings, mock_embeddings, mock_embeddings]})
+    mock_embeddings = [1 * 384]  # Mock embedding vector
+    test_data = pd.DataFrame(
+        {
+            "col1": [1, 2, 3],
+            "col2": ["a", "b", "c"],
+            "embeddings": [mock_embeddings, mock_embeddings, mock_embeddings],
+        }
+    )
     # Mock duckdb connection and operations
     with patch("plugins.utmb_pipeline.duckdb") as mock_duckdb:
         mock_conn = MagicMock()

@@ -11,7 +11,7 @@ from plugins.utmb_pipeline import (
     utmb_extract_data,
     utmb_extract_clean_data,
     utmb_transform_data,
-    load_data_to_db
+    load_data_to_db,
 )
 
 
@@ -48,8 +48,8 @@ def utmb_flow():
         load_data_to_db(data_cleaned)
 
     raw_data: XComArg = utmb_extract()
-    transformed_data: XComArg = utmb_transform(cast(list,raw_data))
-    utmb_load(cast(pd.DataFrame,transformed_data))
+    transformed_data: XComArg = utmb_transform(cast(list, raw_data))
+    utmb_load(cast(pd.DataFrame, transformed_data))
 
 
 utmb_flow()

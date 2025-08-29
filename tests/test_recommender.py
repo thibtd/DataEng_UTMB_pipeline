@@ -79,7 +79,6 @@ def sample_data():
             "image": [f"img{i}" for i in range(1, 13)],
             "link": [f"link{i}" for i in range(1, 13)],
             "date_confirmed": [True] * 12,
-            "style_UTMBWorldSeries": [i % 2 == 0 for i in range(12)],
         }
     )
     return data
@@ -104,7 +103,6 @@ def test_preprocess(recommender):
         "image",
         "link",
         "date_confirmed",
-        "style_UTMBWorldSeries",
         "start_day",
         "end_day",
     ]

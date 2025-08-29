@@ -91,13 +91,12 @@ def utmb_extract_clean_data(data: bs4.element.ResultSet) -> list:
     return data_cleaned
 
 
-def utmb_transform_data(d: list|pd.DataFrame) -> pd.DataFrame:
+def utmb_transform_data(d: list | pd.DataFrame) -> pd.DataFrame:
     data: pd.DataFrame = pd.DataFrame(d)
     # remove  "by UTMB®" in name
     data.loc[:, "name"] = data["name"].str.replace("by UTMB®", "")
     data.loc[:, "name"] = data["name"].str.replace("by UTMB ®", "")
     data.loc[:, "name"] = data["name"].str.strip()
-
 
     # in distances remove "km" and split by " " and make dummies
     data["distances"] = (
@@ -163,7 +162,6 @@ def utmb_transform_data(d: list|pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-
 def load_data_to_db(data: pd.DataFrame) -> None:
     """
     load the dataFrame to a duckdb instance
@@ -171,7 +169,7 @@ def load_data_to_db(data: pd.DataFrame) -> None:
     conn = duckdb.connect("data/utmb_db.duckdb")
     duck_tables = conn.sql("show all tables").df()
     if "UTMB" in duck_tables["name"].values:
-        print("Table UTMB already exists in duckDB, it will be replaced")   
+        print("Table UTMB already exists in duckDB, it will be replaced")
         conn.sql("DROP TABLE UTMB")
     conn.sql("CREATE TABLE UTMB AS SELECT * FROM data;")
     return print("data successfully saved to duckDB")
@@ -179,7 +177,7 @@ def load_data_to_db(data: pd.DataFrame) -> None:
 
 if __name__ == "__main__":
     data_complete = []
-    '''
+    """
     for p in range(1, 4):  # there are 3 pages with races
         url = f"https://www.finishers.com/en/courses?page={p}&series=utmbevent"
         page = utmb_extract_page(url, local=True)
@@ -187,9 +185,9 @@ if __name__ == "__main__":
         data_cleaned = utmb_extract_clean_data(data_raw)
         data_complete.extend(data_cleaned)
         print(len(data_complete))
-    '''
-    #pd.DataFrame(data_complete).to_csv("data/utmb_data_raw.csv", index=False)
-    data_complete = pd.read_csv('data/utmb_data_raw.csv')
+    """
+    # pd.DataFrame(data_complete).to_csv("data/utmb_data_raw.csv", index=False)
+    data_complete = pd.read_csv("data/utmb_data_raw.csv")
     data_cleaned = utmb_transform_data(data_complete)
     data_cleaned.to_csv("data/utmb_data_clean.csv", index=False)
     data_cleaned = pd.read_csv("data/utmb_data_clean.csv")

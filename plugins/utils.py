@@ -36,16 +36,16 @@ def clean_dates(row: pd.Series) -> tuple:
             splits: list = row["date"].split("➜")
             start_split: list[str] = splits[0].strip()
             end_split: list[str] = splits[1].strip().replace(",", "")
-            
+
             multidays = True
-            
-            try: # Pattern : DD day -> Month DD YYYY
+
+            try:  # Pattern : DD day -> Month DD YYYY
                 start_day = int(start_split.split(" ")[0])
                 month_name = end_split.split(" ")[0]
                 month = datetime.datetime.strptime(month_name, "%B").month
                 end_day = int(end_split.split(" ")[1])
                 year = int(end_split.split(" ")[2])
-            except ValueError: # Pattern: Day, Mth DD -> Day Mth DD YYYY
+            except ValueError:  # Pattern: Day, Mth DD -> Day Mth DD YYYY
                 start_day = int(start_split.split(" ")[2])
                 month_name = start_split.split(" ")[1]
                 month = datetime.datetime.strptime(month_name, "%b").month

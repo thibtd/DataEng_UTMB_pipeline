@@ -59,14 +59,7 @@ class Recommender:
         )
         # remove variables
         cleaned_data = cleaned_data.drop(
-            [
-                "name",
-                "country",
-                "city",
-                "image",
-                "link",
-                "date_confirmed" 
-            ],
+            ["name", "country", "city", "image", "link", "date_confirmed"],
             axis=1,
         )
         print(cleaned_data.columns)
